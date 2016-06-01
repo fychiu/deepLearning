@@ -37,7 +37,7 @@ def sigmoid_func(z):
 ### Class LSTM ###
 ##################
 class LSTM(object):
-    def __init__ (self, d_in, d_out, LR, alpha, grad_bound, x=None, q=None):
+    def __init__ (self, d_in, d_out, LR, alpha, grad_bound, x=None, q=None,batchSize=1):
         # d_in: dimension of input
         # d_out: dimension of output
         # LR: learning rate
@@ -46,6 +46,8 @@ class LSTM(object):
         
         self.LR = LR
         self.alpha = alpha
+        self.batchSize = batchSize
+        self.batchNum = theano.shared(0)
         
         self.W = shared_uniform("W",d_out,d_in+d_out)
         self.B = shared_uniform("B",d_out)
@@ -136,6 +138,30 @@ class LSTM(object):
             updates.append((acc, acc_new))
             updates.append((p, p - lr * g))
         return updates
+    '''
+
+    def rmsprop(self, parameter, gradient, lr, rho=0.95, epsilon=1e-6):
+        updates = []
+        if self.batchNum.get_value() == self.batchSize-1:
+            updates.append((self.batchNum, 0))
+            for p,g in izip(parameter, gradient):
+                batch_grad_new = batch_grad + g
+                batch_grad_new /= self.batchSize
+                acc = theano.shared(p.get_value() * 0.)
+                acc_new = rho*acc + (1-rho) * batch_grad_new ** 2
+                scaling = T.sqrt(acc_new + epsilon)
+                batch_grad_new = batch_grad_new / scaling
+                updates.append((acc, acc_new))
+                updates.append((p, p - lr * batch_grad_new))
+                updates.append((batch_grad, p.get_value()*0.))
+        else:
+            updates.append((self.batchNum, self.batchNum+1))
+            for p,g in izip(parameter, gradient):
+                batch_grad = theano.shared(p.get_value() * 0.)
+                batch_grad_new = batch_grad + g
+                updates.append((batch_grad, batch_grad_new))
+        return updates
+    '''
         
     def train(x_seq, y_hat, backward=False):
         return self.train(x_seq[::-1], y_hat) if backward else self.train(x_seq, y_hat)    
