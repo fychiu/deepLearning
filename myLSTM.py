@@ -37,7 +37,7 @@ def sigmoid_func(z):
 ### Class LSTM ###
 ##################
 class LSTM(object):
-    def __init__ (self, d_in, d_out, LR, alpha, grad_bound, x=None, q=None,batchSize=1):
+    def __init__ (self, d_in, d_out, LR, alpha, grad_bound, x=None, q=None, choices=None, batchSize=1):
         # d_in: dimension of input
         # d_out: dimension of output
         # LR: learning rate
@@ -47,7 +47,6 @@ class LSTM(object):
         self.LR = LR
         self.alpha = alpha
         self.batchSize = batchSize
-        self.batchNum = theano.shared(0)
         
         self.W = shared_uniform("W",d_out,d_in+d_out)
         self.B = shared_uniform("B",d_out)
@@ -60,6 +59,10 @@ class LSTM(object):
         
         self.params = self.Wi, self.Bi, self.Wf, self.Bf, \
                         self.W, self.B, self.Wo, self.Bo
+
+        self.batch_grad = []
+        for p in self.params:
+            self.batch_grad.append(theano.shared(p.get_value()*0.))
         
         ### Step Function ###
         def step(x_t, h_tm1, c_tm1):
@@ -94,6 +97,24 @@ class LSTM(object):
                 sequences = q_seq, 
                 outputs_info = [hq_0, cq_0]
                 )
+
+        self.choices = False if choices is None else True
+        if self.choices:
+            self.hOpt_seq_list = []
+            for i in range(len(choices)):
+                opt_seq = T.matrix() if choices is None else choices[i]
+                name_c = 'cOpt%d_0' % (i)
+                name_h = 'hOpt%d_0' % (i)
+                cOpt_0 = shared_zeros(name_c,d_out)
+                hOpt_0 = shared_zeros(name_h,d_out)
+            
+                [hOpt_seq, cOpt_seq],self.updates_train = theano.scan( 
+                    step,
+                    sequences = q_seq, 
+                    outputs_info = [hOpt_0,cOpt_0]
+                    )
+
+                self.hOpt_seq_list.append(hOpt_seq)
         
         y_hat = T.vector()
         y_seq = self.h_seq[-1]
@@ -102,14 +123,14 @@ class LSTM(object):
         # SER
         cost = T.sum((y_seq-y_hat)**2)
         # cosine
-        #cost = T.sum(y_seq*y_hat)/T.sqrt(T.sum(y_seq**2)*T.sum(h_hat**2))
+        #cost = T.sum((y_seq*y_hat)**2)/(T.sum(y_seq**2)*T.sum(h_hat**2))
         
         ### Calculate Gradients ###
         gradients = T.grad(cost, self.params)
         
         self.train = theano.function(
             inputs = [x_seq, y_hat],
-            updates = self.rmsprop(self.params, gradients, self.LR),
+            updates = self.rmsprop(self.params, gradients, self.LR, self.batch_grad),
             outputs = [cost],
             allow_input_downcast = True
             )
@@ -128,6 +149,7 @@ class LSTM(object):
 
     ### RMSProp ###
     # This is copied directly from the Internet
+    '''
     def rmsprop(self, parameter, gradient, lr, rho=0.95, epsilon=1e-6):
         updates = []
         for p,g in izip(parameter, gradient):
@@ -140,28 +162,29 @@ class LSTM(object):
         return updates
     '''
 
-    def rmsprop(self, parameter, gradient, lr, rho=0.95, epsilon=1e-6):
+    def rmsprop(self, parameter, gradient, lr, batch_grad, rho=0.95, epsilon=1e-6):
         updates = []
-        if self.batchNum.get_value() == self.batchSize-1:
-            updates.append((self.batchNum, 0))
-            for p,g in izip(parameter, gradient):
-                batch_grad_new = batch_grad + g
-                batch_grad_new /= self.batchSize
-                acc = theano.shared(p.get_value() * 0.)
-                acc_new = rho*acc + (1-rho) * batch_grad_new ** 2
-                scaling = T.sqrt(acc_new + epsilon)
-                batch_grad_new = batch_grad_new / scaling
-                updates.append((acc, acc_new))
-                updates.append((p, p - lr * batch_grad_new))
-                updates.append((batch_grad, p.get_value()*0.))
-        else:
-            updates.append((self.batchNum, self.batchNum+1))
-            for p,g in izip(parameter, gradient):
-                batch_grad = theano.shared(p.get_value() * 0.)
-                batch_grad_new = batch_grad + g
-                updates.append((batch_grad, batch_grad_new))
+        index = 0
+        for p,g in izip(parameter, gradient):
+            batch_grad_new = (batch_grad[index] + g)/self.batchSize
+            acc = theano.shared(p.get_value() * 0.)
+            acc_new = rho*acc + (1-rho) * batch_grad_new ** 2
+            scaling = T.sqrt(acc_new + epsilon)
+            batch_grad_new = batch_grad_new / scaling
+            updates.append((acc, acc_new))
+            updates.append((p, p - lr * batch_grad_new))
+            updates.append((batch_grad[index], batch_grad[index]*0.))
+            index += 1
         return updates
-    '''
+
+    def rmsprop_batch(self, parameter, gradient, lr, batch_grad, rho=0.95, epsilon=1e-6):
+        updates = []
+        index = 0
+        for p,g in izip(parameter, gradient):
+            batch_grad_new = batch_grad[index] + g
+            updates.append((batch_grad[index], batch_grad_new))
+            index += 1
+        return updates
         
     def train(x_seq, y_hat, backward=False):
         return self.train(x_seq[::-1], y_hat) if backward else self.train(x_seq, y_hat)    
@@ -170,9 +193,11 @@ class LSTM(object):
         return self.test(x_seq)
 
     def output_encoding(self): #backward=False):
-        if self.q is None:
-            return self.h_seq
-        else:
-            return self.h_seq, self.hq_seq
-        #return self.h_seq[::-1] if backward else self.h_seq
+        outputList = []
+        outputList.append(self.h_seq)
+        if self.q is True:
+            outputList.append(self.hq_seq)
+        if self.choices is True:
+            outputList.extend(self.hOpt_seq_list)
+        return outputList
 
