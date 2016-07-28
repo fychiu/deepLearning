@@ -238,24 +238,3 @@ class HiddenLayer(object):
         z = T.transpose(T.dot(self.W, x).T + self.B)
         return z if self.act is None else self.act(z)
 
-'''
-model = DNN([2,2,2], 'test_DNN', 0.0126)
-for i in range(85):
-    print model.train([[9],[3]],[[3],[9]])
-print model.test([[9],[3]])
-'''
-'''
-print model.train([[9],[3]],[[3],[9]])
-print model.train([[9],[3]],[[3],[9]])
-print model.train([[9],[3]],[[3],[9]])
-print model.train([[9],[3]],[[3],[9]])
-print model.train([[9],[3]],[[3],[9]])
-print model.train([[9],[3]],[[3],[9]])
-print model.train([[9],[3]],[[3],[9]])
-print model.train([[9],[3]],[[3],[9]])
-print model.train([[9],[3]],[[3],[9]])
-print model.train([[9],[3]],[[3],[9]])
-print model.test([[8],[2]])
-print model.test([[7],[3]])
-print model.test([[6],[4]])
-'''
