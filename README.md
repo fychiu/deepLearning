@@ -29,7 +29,7 @@ dnn.py:
         should be implemented
     
 
-attenBased.py
+attenBased.py:
 
     Implement the attention-based mechanism structure of Google's paper
     Teaching Machine ot Read and Comprehend
