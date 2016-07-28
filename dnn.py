@@ -125,7 +125,9 @@ class DNN(object):
             newGrad = []
             for grad in gradients:
                 rate = clipNorm/T.sqrt(T.sum(grad**2))
-                newGrad.append(grad*rate)
+                if rate < 1:
+                    grad *= rate
+                newGrad.append(grad)
             gradients = newGrad
         if option == None:
             return self.SGD(params,gradients,learning_rate)
@@ -238,3 +240,24 @@ class HiddenLayer(object):
         z = T.transpose(T.dot(self.W, x).T + self.B)
         return z if self.act is None else self.act(z)
 
+'''
+model = DNN([2,2,2], 'test_DNN', 0.0126)
+for i in range(85):
+    print model.train([[9],[3]],[[3],[9]])
+print model.test([[9],[3]])
+'''
+'''
+print model.train([[9],[3]],[[3],[9]])
+print model.train([[9],[3]],[[3],[9]])
+print model.train([[9],[3]],[[3],[9]])
+print model.train([[9],[3]],[[3],[9]])
+print model.train([[9],[3]],[[3],[9]])
+print model.train([[9],[3]],[[3],[9]])
+print model.train([[9],[3]],[[3],[9]])
+print model.train([[9],[3]],[[3],[9]])
+print model.train([[9],[3]],[[3],[9]])
+print model.train([[9],[3]],[[3],[9]])
+print model.test([[8],[2]])
+print model.test([[7],[3]])
+print model.test([[6],[4]])
+'''
