@@ -66,17 +66,19 @@ class DNN(object):
             d_out = n_layer_list[n+1]
 
             if n == 0 and n != n_layer-1:
-                hiddenLayer = HiddenLayer(x_seq, name, d_in, d_out)
+                hiddenLayer = HiddenLayer(x_seq, name, d_in, d_out,
+                                          activation)
             elif n == 0 and n == n_layer-1:
                 hiddenLayer = HiddenLayer(x_seq, name, d_in, d_out,
-                                          None)
+                                          activation, None)
             elif n == n_layer-1:
                 input = self.hiddenLayerList[n-1].output
                 hiddenLayer = HiddenLayer(input, name, d_in, d_out,
-                                          None)
+                                          activation, None)
             else:
                 input = self.hiddenLayerList[n-1].output
-                hiddenLayer = HiddenLayer(input, name, d_in, d_out)
+                hiddenLayer = HiddenLayer(input, name, d_in, d_out,
+                                          activation)
 
             self.hiddenLayerList.append(hiddenLayer)
 
@@ -121,7 +123,7 @@ class DNN(object):
 
     ### Updates Functions ###
     def updates(self, params, gradients, learning_rate, option=None, clipNorm=0.):
-        if clipNorm:
+        if clipNorm > 0:
             newGrad = []
             for grad in gradients:
                 rate = clipNorm/T.sqrt(T.sum(grad**2))
@@ -129,6 +131,10 @@ class DNN(object):
                     grad *= rate
                 newGrad.append(grad)
             gradients = newGrad
+        elif clipNorm < 0:
+            print 'ERROR: clipNorm < 0'
+            quit()
+
         if option == None:
             return self.SGD(params,gradients,learning_rate)
         elif option == self.adagrad:
