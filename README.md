@@ -23,3 +23,9 @@ dnn.py:
         The example of theano let me know more clear about how a module of DNN
         should be implemented
     
+
+attenBased.py
+
+    Implement the attention-based mechanism structure of Google's paper
+    Teaching Machine ot Read and Comprehend
+        http://arxiv.org/abs/1506.03340
