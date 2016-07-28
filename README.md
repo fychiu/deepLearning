@@ -34,3 +34,9 @@ attenBased.py:
     Implement the attention-based mechanism structure of Google's paper
     Teaching Machine ot Read and Comprehend
         http://arxiv.org/abs/1506.03340
+
+
+Other references:
+    
+    Chainer Neural Network Framework:
+        http://docs.chainer.org/en/stable/index.html
