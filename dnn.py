@@ -52,6 +52,8 @@ class DNN(object):
 
         self.Algo = algo if algo != None else self.adadelta
 
+        self.thrGrad = 1.0
+
         n_layer = len(n_layer_list) - 1
 
         ### DNN Layers Define ###
@@ -118,7 +120,13 @@ class DNN(object):
         return output
 
     ### Updates Functions ###
-    def updates(self, params, gradients, learning_rate, option=None):
+    def updates(self, params, gradients, learning_rate, option=None, clip=False):
+        if clip:
+            newGrad = []
+            for grad in gradients:
+                rate = self.thrGrad/T.sqrt(T.sum(grad**2))
+                newGrad.append(grad*rate)
+            gradients = newGrad
         if option == None:
             return self.SGD(params,gradients,learning_rate)
         elif option == self.adagrad:
@@ -163,15 +171,15 @@ class DNN(object):
                  epsilon=1e-8):
         updates = []
         for p,g in izip(params, gradients):
-            acc_g = theano.shared(0.)
-            acc_g_new = gamma*acc_g + (1 - gamma)*((g**2).sum())
-            acc_theta = theano.shared(learning_rate)
-            scaling = T.sqrt(acc_theta / (acc_g_new + epsilon))
+            acc_g = theano.shared(p.get_value()*0.)
+            acc_g_new = gamma*acc_g + (1 - gamma)*((g**2))
+            acc_theta = theano.shared(p.get_value()*0.)
+            scaling = T.sqrt((acc_theta+epsilon)/(acc_g_new+epsilon))
             g = g * scaling
-            acc_theta_new = gamma*acc_theta + (1 - gamma)*(g**2).sum()
+            acc_theta_new = gamma*acc_theta + (1 - gamma)*(g**2)
             updates.append((acc_g, acc_g_new))
             updates.append((acc_theta, acc_theta_new))
-            updates.append((p, p - g))
+            updates.append((p, p - learning_rate * g))
         return updates
 
     def RMSprop(self, params, gradients, learning_rate, gamma=0.9, \
