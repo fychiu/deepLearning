@@ -37,7 +37,7 @@ def sigmoid_func(z):
 ### Class DNN ###
 #################
 class DNN(object):
-    def __init__(self, n_layer_list, name, LR=0.01, x=None, algo=None, activation=T.tanh):
+    def __init__(self, n_layer_list, name, LR=0.01, x=None, algo=None, activation=T.tanh, clipNorm=0.):
         self.name = name
         self.LR = LR
         self.n_layer_list = n_layer_list
@@ -52,7 +52,7 @@ class DNN(object):
 
         self.Algo = algo if algo != None else self.adadelta
 
-        self.thrGrad = 1.0
+        self.clipNorm = clipNorm
 
         n_layer = len(n_layer_list) - 1
 
@@ -102,7 +102,7 @@ class DNN(object):
         self.train = theano.function(
             inputs=[x_seq,y_hat],
             updates=self.updates(self.params, gradients, self.LR, \
-                                 self.Algo),
+                                 self.Algo, self.clipNorm),
             outputs=[cost],
             allow_input_downcast=True
             )
@@ -120,11 +120,11 @@ class DNN(object):
         return output
 
     ### Updates Functions ###
-    def updates(self, params, gradients, learning_rate, option=None, clip=False):
-        if clip:
+    def updates(self, params, gradients, learning_rate, option=None, clipNorm=0.):
+        if clipNorm:
             newGrad = []
             for grad in gradients:
-                rate = self.thrGrad/T.sqrt(T.sum(grad**2))
+                rate = clipNorm/T.sqrt(T.sum(grad**2))
                 newGrad.append(grad*rate)
             gradients = newGrad
         if option == None:
@@ -150,8 +150,8 @@ class DNN(object):
     def AdaGrad(self, params, gradients, learning_rate, epsilon=1e-8):
         updates = []
         for p,g in izip(params, gradients):
-            acc = theano.shared(0.)
-            acc_new = acc + (g**2).sum()
+            acc = theano.shared(p.get_value()*0.)
+            acc_new = acc + (g**2)
             scaling = T.sqrt(acc_new + epsilon)
             g = g/scaling
             updates.append((acc, acc_new))
@@ -186,8 +186,8 @@ class DNN(object):
                 epsilon=1e-8):
         updates = []
         for p,g in izip(params, gradients):
-            acc = theano.shared(0.)
-            acc_new = gamma*acc + (1 - gamma)*((g**2).sum())
+            acc = theano.shared(p.get_value()*0.)
+            acc_new = gamma*acc + (1 - gamma)*(g**2)
             scaling = T.sqrt(acc_new + epsilon)
             g = g/scaling
             updates.append((acc, acc_new))
@@ -200,7 +200,7 @@ class DNN(object):
             last = theano.shared(p.get_value()*0.)
             last_new = gamma*last - learning_rate*g
             updates.append((last, last_new))
-            updates.append((p, p + last_new - learning_rate*g))
+            updates.append((p, p - learning_rate*g + gamma*last_new))
         return updates
 
     ### L1 L2 Norm ###
