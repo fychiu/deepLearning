@@ -33,6 +33,9 @@ def sigmoid_func(z):
     # use optimizer_including=local_hard_sigmoid
     return T.nnet.sigmoid(z)
 
+def ReLU(z,alpha=0):
+    return T.nnet.relu(z,alpha)
+
 #################
 ### Class DNN ###
 #################
@@ -98,7 +101,12 @@ class DNN(object):
         self.cost = cost
 
         gradients = T.grad(cost, self.params) 
-        #gradients = [T.clip(g,-1,1) for g in T.grad(cost,self.params)]
+        if clipNorm > 0:
+            gradients = [ T.clip(g,-clipNorm,clipNorm) \
+                          for g in T.grad(cost,self.params)]
+        elif clipNorm < 0:
+            print 'ERROR: clipNorm < 0'
+            quit()
 
         ### Model Functions ###
         self.train = theano.function(
@@ -114,26 +122,14 @@ class DNN(object):
             allow_input_downcast=True
             )
 
-    def transform(x):
-        output = 0
+    def transform(self,x):
+        output = x
         for layer in self.hiddenLayerList:
-            output = layer.transform(x)
-            x = output
+            output = layer.transform(output)
         return output
 
     ### Updates Functions ###
     def updates(self, params, gradients, learning_rate, option=None, clipNorm=0.):
-        if clipNorm > 0:
-            newGrad = []
-            for grad in gradients:
-                rate = clipNorm/T.sqrt(T.sum(grad**2))
-                if rate < 1:
-                    grad *= rate
-                newGrad.append(grad)
-            gradients = newGrad
-        elif clipNorm < 0:
-            print 'ERROR: clipNorm < 0'
-            quit()
 
         if option == None:
             return self.SGD(params,gradients,learning_rate)
