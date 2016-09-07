@@ -34,7 +34,28 @@ attenBased.py:
     Implement the attention-based mechanism structure of Google's paper
     Teaching Machine ot Read and Comprehend
         http://arxiv.org/abs/1506.03340
-
+    
+    The file will return three models:
+    1. train_model: 
+        a) input (1) a sequence of document word vector, 
+                 (2) a sequence of question word vector, and 
+                 (3) the correct word vector.
+        b) train model
+        
+    2. test_model:
+        a) input (1) a sequence of document word vector, 
+                 (2) a sequence of question word vector, and 
+        b) output a word vector
+        
+    3. testAns_model:
+        a) input (1) a sequence of document word vector, 
+                 (2) a sequence of question word vector, and
+                 (3) four sequences of option word vector
+                 so totally, 6 inputs
+        b) output the index of answer my model predicts
+            Ex: when answer is predicted as B option, the output is 1
+                                            A option, the output is 0
+    
 
 Other references:
     
