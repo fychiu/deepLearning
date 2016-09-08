@@ -70,18 +70,18 @@ class DNN(object):
 
             if n == 0 and n != n_layer-1:
                 hiddenLayer = HiddenLayer(x_seq, name, d_in, d_out,
-                                          activation)
+                                          activation=activation)
             elif n == 0 and n == n_layer-1:
                 hiddenLayer = HiddenLayer(x_seq, name, d_in, d_out,
-                                          activation, None)
+                                          activation=None)
             elif n == n_layer-1:
                 input = self.hiddenLayerList[n-1].output
                 hiddenLayer = HiddenLayer(input, name, d_in, d_out,
-                                          activation, None)
+                                          activation=None)
             else:
                 input = self.hiddenLayerList[n-1].output
                 hiddenLayer = HiddenLayer(input, name, d_in, d_out,
-                                          activation)
+                                          activation=activation)
 
             self.hiddenLayerList.append(hiddenLayer)
 
